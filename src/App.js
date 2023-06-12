@@ -1,24 +1,115 @@
-import logo from './logo.svg';
+import React from "react"
+import Sidebar from "./components/Sidebar"
+import Editor from "./components/Editor"
+import { data } from "./data"
+import Split from "react-split"
 import './App.css';
+import { nanoid } from "nanoid";
 
 function App() {
+  const [notes, setNotes] = React.useState(() => {
+    return JSON.parse(localStorage.getItem("notes")) || []
+  });
+  const [currentNoteId, setCurrentNoteId] = React.useState(
+    (notes[0] && notes[0].id) || ""
+  );
+  //notes[0] && notes[0].id -> verification to access
+  React.useEffect( () => {
+    localStorage.setItem("notes", JSON.stringify(notes))
+    //console.log(notes[0].body.split("\n"));
+  }, [notes])
+  function createNewNote(){
+    const newNote = {
+      id: nanoid(),
+      body: "# Type your markdown note's title here"
+    }
+
+    setNotes(prevNotes => [newNote, ...prevNotes])
+    setCurrentNoteId(newNote.id)
+  }
+
+  function updateNote(text){
+
+    setNotes(oldNotes => {
+      const newArr = []
+      for(let i = 0; i < oldNotes.length; i++){
+        const oldNote = oldNotes[i]
+        if(oldNote.id === currentNoteId){
+          newArr.unshift({...oldNote, body: text})
+        }
+        else{
+          newArr.push(oldNote)
+        }
+      }
+      return newArr;
+    })
+  }
+  function deleteNote(event, noteId){
+    event.stopPropagation()
+    //console.log(event, noteId)
+    setNotes(oldNotes => oldNotes.filter((note) => note.id !== noteId))
+  }
+  //code above does not rearrange the notes
+  // function updateNote(text){
+  //   setNotes(oldNotes => oldNotes.map(oldNote => {
+
+  //     return oldNote.id === currentNoteId
+  //     ? {...oldNote, body: text}
+  //     : oldNote
+  //   }))
+  // }
+
+  function findCurrentNote(){
+    return notes.find(note => {
+      return note.id === currentNoteId
+    }) || notes[0]
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
+    <main>
+      {
+        notes.length > 0
+        ?
+        <Split
+          sizes={[25, 75]}
+          minSize={100}
+          expandToMin={false}
+          gutterSize={10}
+          gutterAlign="center"
+          snapOffset={30}
+          dragInterval={1}
+          direction="horizontal"
+          cursor="col-resize"
+          className="split"
         >
-          Learn React
-        </a>
-      </header>
-    </div>
+          <Sidebar
+            notes={notes}
+            currentNote={findCurrentNote()}
+            setCurrentNoteId={setCurrentNoteId}
+            newNote={createNewNote}
+            deleteNote={deleteNote}
+          />
+          {
+            currentNoteId &&
+            notes.length > 0 &&
+            <Editor
+              currentNote={findCurrentNote()}
+              updateNote={updateNote}
+            />
+          }
+        </Split>
+        :
+        <div className="no-notes">
+          <h1>You have no notes</h1>
+          <button
+            className="first-note"
+            onClick={createNewNote}
+          >
+            Crete a note
+          </button>
+        </div>
+      }
+    </main>
   );
 }
 
